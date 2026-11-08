@@ -16,7 +16,7 @@
 | Patient dashboard | log in as alice | works | appointments, history, labs, prescriptions; booking works; doctor-entered data appears |
 | RBAC enforcement | curl /api/patients with patient token / no token | works | patient token → 403 "Access denied"; no token → 401; server-side via authorizeRoles |
 | Stale session handling | old token in localStorage | broken | 403 responses are stored where an array is expected; DoctorDashboard crashes (`patients.map is not a function`); needs error handling |
-| FHIR Patient read | GET /api/fhir/Patient/{fhir_id} | works | **birthDate one day early** (timezone: DATE → JS Date → UTC); no identifier |
+| FHIR Patient read | GET /api/fhir/Patient/{fhir_id} | works | **birthDate one day early** (timezone: DATE → JS Date → UTC; UI shows 15 June, FHIR emits 14 June, so the bug is in the mapper, not the data); no identifier |
 | FHIR Observation search | GET /api/fhir/Observation?patient= | works | correct status/category/LOINC/UCUM structure; **every code is LOINC 1000-0 placeholder**; dates one day early |
 | FHIR Condition search | GET /api/fhir/Condition?patient= | works | correct clinicalStatus/verificationStatus; **SNOMED code 000000 placeholder**; dates one day early |
 | FHIR MedicationRequest search | GET /api/fhir/MedicationRequest?patient= | works | **RxNorm code 000000 placeholder**; status rule wrong (Lisinopril with 2027 end date shows `completed`); `requester` references Practitioner/doc-1 which has no endpoint; dates one day early |
