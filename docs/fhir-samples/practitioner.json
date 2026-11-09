@@ -1,0 +1,1 @@
+{"resourceType":"Practitioner","id":"doc-1","identifier":[{"system":"http://medilink.example/practitioner","value":"doc-1"}],"active":true,"name":[{"use":"official","family":"Doe","given":["John"],"prefix":["Dr."]}],"telecom":[{"system":"phone","value":"+1-555-0199","use":"work"}],"qualification":[{"code":{"text":"Cardiology"}}]}

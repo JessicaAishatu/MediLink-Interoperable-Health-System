@@ -61,14 +61,14 @@ const mapToFHIRPatient = (p) => {
         value: p.phone,
         use: 'mobile'
       }
-    ] : [],
+    ] : undefined,
     gender: p.gender ? p.gender.toLowerCase() : 'unknown',
     birthDate: fhirDate(p.birth_date),
     address: p.address ? [
       {
         text: p.address
       }
-    ] : [],
+    ] : undefined,
     meta: {
       profile: ['http://hl7.org/fhir/StructureDefinition/Patient']
     }
@@ -199,13 +199,46 @@ const mapToFHIRCondition = (c, patientFhirId) => {
       {
         text: c.notes
       }
-    ] : []
+    ] : undefined
   };
 };
 
 // ==========================================
 // FHIR REST API ENDPOINTS
 // ==========================================
+
+// 0. CapabilityStatement — what this server supports (public, no auth, per FHIR convention)
+router.get('/metadata', (req, res) => {
+  const base = `${req.protocol}://${req.get('host')}/api/fhir`;
+    const resource = (type, searchParams = []) => {
+    const r = { type, interaction: [{ code: 'read' }] };
+    if (searchParams.length) {
+      r.interaction.push({ code: 'search-type' });
+      r.searchParam = searchParams.map(name => ({ name, type: 'reference' }));
+    }
+    return r;
+  };
+  res.json({
+    resourceType: 'CapabilityStatement',
+    status: 'active',
+    date: new Date().toISOString().slice(0, 10),
+    kind: 'instance',
+    fhirVersion: '4.0.1',
+    format: ['json'],
+    implementation: { description: 'MediLink Interoperable Health System', url: base },
+    rest: [{
+      mode: 'server',
+      security: { description: 'JWT bearer token required on all resource endpoints' },
+      resource: [
+        resource('Patient'),
+        resource('Practitioner'),
+        resource('Observation', ['patient']),
+        resource('Condition', ['patient']),
+        resource('MedicationRequest', ['patient'])
+      ]
+    }]
+  });
+});
 
 // 1. Get Patient list in FHIR Bundle format
 router.get('/Patient', authenticateToken, async (req, res) => {
@@ -447,6 +480,30 @@ router.post('/Patient', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Import FHIR Patient error:', error);
     res.status(500).json({ resourceType: 'OperationOutcome', issue: [{ severity: 'error', code: 'exception', diagnostics: error.message }] });
+  }
+});
+
+router.get('/Practitioner/:id', authenticateToken, async (req, res) => {
+  const docId = String(req.params.id).replace('doc-', '');
+  try {
+    const [rows] = await db.query('SELECT * FROM doctors WHERE id = ?', [docId]);
+    if (rows.length === 0) {
+      return res.status(404).json({ resourceType: 'OperationOutcome',
+        issue: [{ severity: 'error', code: 'not-found', diagnostics: `Practitioner doc-${docId} not found.` }] });
+    }
+    const d = rows[0];
+    res.json({
+      resourceType: 'Practitioner',
+      id: `doc-${d.id}`,
+      identifier: [{ system: 'http://medilink.example/practitioner', value: `doc-${d.id}` }],
+      active: true,
+      name: [{ use: 'official', family: d.last_name, given: [d.first_name], prefix: ['Dr.'] }],
+      telecom: d.phone ? [{ system: 'phone', value: d.phone, use: 'work' }] : undefined,
+      qualification: d.specialty ? [{ code: { text: d.specialty } }] : undefined,
+    });
+  } catch (error) {
+    res.status(500).json({ resourceType: 'OperationOutcome',
+      issue: [{ severity: 'error', code: 'exception', diagnostics: error.message }] });
   }
 });
 
