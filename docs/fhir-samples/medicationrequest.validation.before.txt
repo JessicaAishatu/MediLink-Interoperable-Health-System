@@ -1,0 +1,18 @@
+Error
+Line: 1, Col:401
+Unknown code '000000' in the CodeSystem 'http://www.nlm.nih.gov/research/umls/rxnorm' version '03022026'
+Warning
+Line: 1, Col:727
+Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)
+Error
+Line: 1, Col:1065
+Unknown code '000000' in the CodeSystem 'http://www.nlm.nih.gov/research/umls/rxnorm' version '03022026'
+Warning
+Line: 1, Col:1388
+Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)
+Warning
+Line: 1, Col:1391
+SearchSet Bundles should have a self link that specifies what the search was
+Warning
+Line: 1, Col:1391
+SearchSet bundles should have search modes on the entries

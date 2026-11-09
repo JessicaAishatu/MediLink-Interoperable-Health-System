@@ -1,0 +1,12 @@
+Warning
+Line: 1, Col:905
+Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)
+Warning
+Line: 1, Col:1609
+Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)
+Warning
+Line: 1, Col:2290
+value should not start or finish with whitespace 'Slightly elevated '
+Warning
+Line: 1, Col:2325
+Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)

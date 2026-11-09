@@ -3,12 +3,51 @@ const router = express.Router();
 const db = require('../config/db');
 const { authenticateToken } = require('../middleware/auth');
 
+// Terminology lookup: local display text -> standard code. Verified against
+// LOINC 2.83, SNOMED CT International 2025-02, RxNorm 03/2026. Anything not
+// listed is emitted as text only (no coding), which is valid FHIR.
+const LOINC = {
+  'Hemoglobin A1c':                   { code: '4548-4',  display: 'Hemoglobin A1c/Hemoglobin.total in Blood' },
+  'Serum Cholesterol':                { code: '2093-3',  display: 'Cholesterol [Mass/volume] in Serum or Plasma' },
+  'Complete Blood Count (CBC)':       { code: '58410-2', display: 'CBC panel - Blood by Automated count' },
+  'TSH (Thyroid Stimulating Hormone)':{ code: '3016-3',  display: 'Thyrotropin [Units/volume] in Serum or Plasma' },
+  'Vitamin D, 25-Hydroxy':            { code: '62292-8',  display: '25-Hydroxyvitamin D3+25-Hydroxyvitamin D2 [Mass/volume] in Serum or Plasma' }
+};
+const SNOMED = {
+  'Essential Hypertension':   { code: '59621000',  display: 'Essential hypertension' },
+  'Mild Seasonal Allergy':    { code: '367498001', display: 'Seasonal allergic rhinitis' },
+  'Type 2 Diabetes Mellitus': { code: '44054006',  display: 'Diabetes mellitus type 2' },
+  'Asthma':                   { code: '195967001', display: 'Asthma' }
+};
+const RXNORM = {
+  'Lisinopril 10mg':   { code: '314076', display: 'lisinopril 10 MG Oral Tablet' },
+  'Metformin 500mg':   { code: '861007', display: 'metformin hydrochloride 500 MG Oral Tablet' },
+  'Atorvastatin 20mg': { code: '617310', display: 'atorvastatin 20 MG Oral Tablet' },
+  'Amoxicillin 250mg': { code: '308182', display: 'amoxicillin 250 MG Oral Capsule' }
+};
+
+// Build a CodeableConcept: coding only when we have a verified code.
+function codeable(system, lookup, text) {
+  const hit = lookup[text];
+  return hit ? { coding: [{ system, code: hit.code, display: hit.display }], text }
+             : { text };
+}
+
+// Format a MySQL DATE/DATETIME as a FHIR date without timezone shift.
+function fhirDate(d) {
+  if (!d) return undefined;
+  if (typeof d === 'string') return d.slice(0, 10);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 // HELPER: Convert database Patient to FHIR Patient resource
 const mapToFHIRPatient = (p) => {
   return {
     resourceType: 'Patient',
     id: p.fhir_id,
     active: true,
+    identifier: [{ system: 'http://medilink.example/mrn', value: p.fhir_id }],
     name: [
       {
         use: 'official',
@@ -24,7 +63,7 @@ const mapToFHIRPatient = (p) => {
       }
     ] : [],
     gender: p.gender ? p.gender.toLowerCase() : 'unknown',
-    birthDate: p.birth_date ? p.birth_date.toISOString().slice(0, 10) : null,
+    birthDate: fhirDate(p.birth_date),
     address: p.address ? [
       {
         text: p.address
@@ -55,20 +94,12 @@ const mapToFHIRObservation = (lr, patientFhirId) => {
         ]
       }
     ],
-    code: {
-      coding: [
-        {
-          system: 'http://loinc.org',
-          code: '1000-0', // Default mock code
-          display: lr.test_name
-        }
-      ],
-      text: lr.test_name
-    },
+    code: codeable('http://loinc.org', LOINC, lr.test_name),
     subject: {
       reference: `Patient/${patientFhirId}`
     },
-    effectiveDateTime: lr.test_date ? lr.test_date.toISOString().slice(0, 10) : null
+    performer: [{ reference: 'Organization/medilink', display: 'MediLink Hospital Laboratory' }],
+    effectiveDateTime: fhirDate(lr.test_date),
   };
 
   if (lr.status === 'completed') {
@@ -100,22 +131,13 @@ const mapToFHIRMedicationRequest = (pr, patientFhirId) => {
   return {
     resourceType: 'MedicationRequest',
     id: `medrx-${pr.id}`,
-    status: pr.end_date ? 'completed' : 'active',
+    status: pr.end_date && new Date(pr.end_date) < new Date() ? 'completed' : 'active',
     intent: 'order',
-    medicationCodeableConcept: {
-      coding: [
-        {
-          system: 'http://www.nlm.nih.gov/research/umls/rxnorm',
-          code: '000000', // Default mock RxNorm code
-          display: pr.medication_name
-        }
-      ],
-      text: pr.medication_name
-    },
+    medicationCodeableConcept: codeable('http://www.nlm.nih.gov/research/umls/rxnorm', RXNORM, pr.medication_name),
     subject: {
       reference: `Patient/${patientFhirId}`
     },
-    authoredOn: pr.start_date ? pr.start_date.toISOString().slice(0, 10) : null,
+    authoredOn: fhirDate(pr.start_date),
     requester: pr.doctor_last ? {
       reference: `Practitioner/doc-${pr.doctor_id}`,
       display: `Dr. ${pr.doctor_first} ${pr.doctor_last}`
@@ -168,20 +190,11 @@ const mapToFHIRCondition = (c, patientFhirId) => {
         ]
       }
     ],
-    code: {
-      coding: [
-        {
-          system: 'http://snomed.info/sct',
-          code: '000000', // Default mock SNOMED-CT code
-          display: c.condition_name
-        }
-      ],
-      text: c.condition_name
-    },
+    code: codeable('http://snomed.info/sct', SNOMED, c.condition_name),
     subject: {
       reference: `Patient/${patientFhirId}`
     },
-    onsetDateTime: c.onset_date ? c.onset_date.toISOString().slice(0, 10) : null,
+    onsetDateTime: fhirDate(c.onset_date),
     note: c.notes ? [
       {
         text: c.notes
@@ -262,7 +275,8 @@ router.get('/Observation', authenticateToken, async (req, res) => {
       const fhirObs = mapToFHIRObservation(lr, lr.patient_fhir_id);
       return {
         fullUrl: `${req.protocol}://${req.get('host')}/api/fhir/Observation/${fhirObs.id}`,
-        resource: fhirObs
+        resource: fhirObs,
+        search: { mode: 'match' }
       };
     });
 
@@ -270,6 +284,7 @@ router.get('/Observation', authenticateToken, async (req, res) => {
       resourceType: 'Bundle',
       type: 'searchset',
       total: results.length,
+      link: [{ relation: 'self', url: `${req.protocol}://${req.get('host')}${req.originalUrl}` }],
       entry: fhirEntries
     };
 
@@ -303,7 +318,8 @@ router.get('/MedicationRequest', authenticateToken, async (req, res) => {
       const fhirMed = mapToFHIRMedicationRequest(pr, pr.patient_fhir_id);
       return {
         fullUrl: `${req.protocol}://${req.get('host')}/api/fhir/MedicationRequest/${fhirMed.id}`,
-        resource: fhirMed
+        resource: fhirMed,
+        search: { mode: 'match' }
       };
     });
 
@@ -311,6 +327,7 @@ router.get('/MedicationRequest', authenticateToken, async (req, res) => {
       resourceType: 'Bundle',
       type: 'searchset',
       total: prescriptions.length,
+      link: [{ relation: 'self', url: `${req.protocol}://${req.get('host')}${req.originalUrl}` }],
       entry: fhirEntries
     };
 
@@ -337,13 +354,13 @@ router.get('/Condition', authenticateToken, async (req, res) => {
       query += ' WHERE p.fhir_id = ?';
       params.push(cleanId);
     }
-
     const [conditions] = await db.query(query, params);
     const fhirEntries = conditions.map(c => {
       const fhirCond = mapToFHIRCondition(c, c.patient_fhir_id);
       return {
         fullUrl: `${req.protocol}://${req.get('host')}/api/fhir/Condition/${fhirCond.id}`,
-        resource: fhirCond
+        resource: fhirCond,
+        search: { mode: 'match' }
       };
     });
 
@@ -351,6 +368,7 @@ router.get('/Condition', authenticateToken, async (req, res) => {
       resourceType: 'Bundle',
       type: 'searchset',
       total: conditions.length,
+      link: [{ relation: 'self', url: `${req.protocol}://${req.get('host')}${req.originalUrl}` }],
       entry: fhirEntries
     };
 

@@ -1,0 +1,33 @@
+Warning
+Line: 1, Col:679
+Best Practice Recommendation: In general, all observations should have a performer
+Error
+Line: 1, Col:460
+Unknown code '1000-0' in the CodeSystem 'http://loinc.org' version '2.83'
+Warning
+Line: 1, Col:679
+Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)
+Warning
+Line: 1, Col:1253
+Best Practice Recommendation: In general, all observations should have a performer
+Error
+Line: 1, Col:1095
+Unknown code '1000-0' in the CodeSystem 'http://loinc.org' version '2.83'
+Warning
+Line: 1, Col:1253
+Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)
+Warning
+Line: 1, Col:1774
+Best Practice Recommendation: In general, all observations should have a performer
+Error
+Line: 1, Col:1688
+Unknown code '1000-0' in the CodeSystem 'http://loinc.org' version '2.83'
+Warning
+Line: 1, Col:1774
+Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)
+Warning
+Line: 1, Col:1777
+SearchSet Bundles should have a self link that specifies what the search was
+Warning
+Line: 1, Col:1777
+SearchSet bundles should have search modes on the entries

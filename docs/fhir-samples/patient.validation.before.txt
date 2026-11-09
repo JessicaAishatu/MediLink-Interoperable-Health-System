@@ -1,0 +1,3 @@
+Warning
+Line: 1, Col:360
+Constraint failed: dom-6: 'A resource should have narrative for robust management' (defined in http://hl7.org/fhir/StructureDefinition/DomainResource) (Best Practice Recommendation)
