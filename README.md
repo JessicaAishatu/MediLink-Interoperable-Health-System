@@ -25,16 +25,18 @@ React single-page app (Vite) → Express REST API with JWT and RBAC → MySQL 8.
 
 ## FHIR support
 
-Base path: `/api/fhir`. All FHIR routes require a JWT (`Authorization: Bearer <token>`); obtain one from `POST /api/auth/login`.
+Base path: `/api/fhir`. All FHIR routes except `/metadata` require a JWT (`Authorization: Bearer <token>`); obtain one from `POST /api/auth/login`. Every resource has been checked against the HL7 FHIR R4 validator with zero errors; reports and samples are in `docs/fhir-samples/`, and the full conformance statement in `docs/fhir-conformance.md`.
 
-| Resource | Endpoint | Source table | Notes |
+| Resource | Interactions | Search parameters | Source table → FHIR mapping |
 | --- | --- | --- | --- |
-| Patient | `GET /api/fhir/Patient/{fhir_id}` | patients | name, gender, birthDate, telecom, address |
-| Observation | `GET /api/fhir/Observation?patient={fhir_id}` | lab_results | searchset Bundle; status, category laboratory, LOINC code, UCUM valueQuantity |
-| Condition | `GET /api/fhir/Condition?patient={fhir_id}` | medical_histories | clinicalStatus, verificationStatus, SNOMED code, onsetDateTime |
-| MedicationRequest | `GET /api/fhir/MedicationRequest?patient={fhir_id}` | prescriptions | status, intent, RxNorm code, dosageInstruction with timing |
+| Patient | read | — | patients: fhir_id → id and identifier (system `http://medilink.example/mrn`); first_name/last_name → name; gender; birth_date → birthDate; phone → telecom; address → address.text |
+| Practitioner | read | — | doctors: id → `doc-{id}`; first_name/last_name → name with prefix Dr.; phone → telecom; specialty → qualification.code.text |
+| Observation | search-type | patient | lab_results: test_name → code (LOINC via lookup table, else text); result_value/result_unit → valueQuantity (UCUM) or valueString; test_date → effectiveDateTime; status completed → final, otherwise registered; reference_range → referenceRange.text; performer fixed to Organization/medilink |
+| Condition | search-type | patient | medical_histories: condition_name → code (SNOMED via lookup table, else text); status → clinicalStatus active/resolved; onset_date → onsetDateTime; notes → note |
+| MedicationRequest | search-type | patient | prescriptions: medication_name → medicationCodeableConcept (RxNorm via lookup table, else text); start_date → authoredOn; end_date in the past → status completed, else active; doctor → requester Practitioner/doc-{id}; dosage/frequency → dosageInstruction.text and timing |
+| CapabilityStatement | read (`/metadata`, no auth) | — | generated |
 
-Not yet supported: CapabilityStatement (`/metadata`), per-resource reads for Observation/Condition/MedicationRequest, FHIR create/update, Bundle transactions, SMART on FHIR / OAuth2. Sample responses are in `docs/fhir-samples/`.
+Search Bundles are `searchset` type with a `self` link and `search.mode = match` on each entry. Not supported: per-resource reads for Observation/Condition/MedicationRequest, FHIR create/update, Bundle transactions, SMART on FHIR / OAuth2 (full list in the conformance document).
 
 ## Run it
 
@@ -74,19 +76,14 @@ All patients, clinicians and records are fictional demo data created by `backend
 
 Found in a clean-clone audit (`docs/audit.md`) and being fixed:
 
-- FHIR dates are emitted one day early (timezone conversion in the mapper; the UI shows the correct date).
-- Terminology codes are placeholders (`000000`, `1000-0`) rather than real SNOMED, LOINC and RxNorm codes.
-- MedicationRequest status rule is wrong for prescriptions with a future end date.
-- `requester` references a Practitioner resource that has no endpoint.
+
 - A stale token in browser storage causes a 403 that crashes the doctor dashboard instead of redirecting to login.
 - CORS allows any origin; `.env.example` ships a non-placeholder JWT secret.
 
 ## Roadmap
 
-1. Validate every resource against the HL7 FHIR R4 validator and publish the reports.
-2. Add `GET /api/fhir/metadata` (CapabilityStatement) and per-resource reads.
-3. Replace the in-process mock with a separate FHIR server so the import is a real two-system exchange.
-4. Tests (Jest/supertest), security hardening, and a documented data mapping.
+1. Replace the in-process mock with a separate FHIR server so the import is a real two-system exchange.
+2. Tests (Jest/supertest), security hardening, and a documented data mapping.
 
 ## Provenance
 
