@@ -1,0 +1,8 @@
+{
+  "name": "riverside-general-fhir",
+  "version": "1.0.0",
+  "description": "Mock external hospital FHIR R4 server used to demonstrate cross-system import into MediLink",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "dependencies": { "express": "^4.19.2", "cors": "^2.8.5" }
+}
