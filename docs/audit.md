@@ -23,6 +23,7 @@
 | FHIR CapabilityStatement | GET /api/fhir/metadata | missing | |
 | Per-resource reads advertised in Bundle fullUrl | /api/fhir/Observation/{id} etc. | missing | routes do not exist |
 | External hospital search/import | doctor dashboard, Interoperability panel | works, but | the "external" patients (Sarah Connor, Bruce Wayne) are hard-coded in `routes/interop.js`; no second system is contacted; `hospitalSource` is not a FHIR field |
+| External source unreachable | stop the external server, search | fixed | backend returns 502 with message; UI previously crashed, now shows the message |
 
 ## Security notes
 - JWT secret and DB password read from .env (not committed). `.env.example` ships a real-looking JWT_SECRET; should be a placeholder.

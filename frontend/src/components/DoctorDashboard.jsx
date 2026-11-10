@@ -259,16 +259,23 @@ export default function DoctorDashboard({ user, onLogout }) {
     e.preventDefault();
     setImportStatus({ text: '', type: '' });
     try {
-      const response = await fetch(`http://localhost:5000/api/interop/external-search?name=${extSearchName}&hospital=${extSearchHospital}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await fetch(
+        `http://localhost:5000/api/interop/external-search?name=${encodeURIComponent(extSearchName)}&hospital=${encodeURIComponent(extSearchHospital)}`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
       const data = await response.json();
-      setExtResults(data);
-      if (data.length === 0) {
+      if (!response.ok) {
+        setExtResults([]);
+        setImportStatus({ text: data.message || `External search failed (${response.status}).`, type: 'danger' });
+        return;
+      }
+      setExtResults(Array.isArray(data) ? data : []);
+      if (!Array.isArray(data) || data.length === 0) {
         setImportStatus({ text: 'No external records matched search filters.', type: 'danger' });
       }
     } catch (err) {
-      setImportStatus({ text: 'Failed to search external systems.', type: 'danger' });
+      setExtResults([]);
+      setImportStatus({ text: 'Failed to reach the MediLink server.', type: 'danger' });
     }
   };
 
@@ -284,10 +291,15 @@ export default function DoctorDashboard({ user, onLogout }) {
         body: JSON.stringify({ fhirPatient: externalPat })
       });
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message);
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message);
 
-      setImportStatus({ text: 'Record and linked clinical timeline successfully synchronized!', type: 'success' });
+  const { imported = {}, warnings = [] } = data;
+  setImportStatus({
+    text: `${data.message} Conditions ${imported.conditions ?? 0}, lab results ${imported.observations ?? 0}, prescriptions ${imported.medications ?? 0}.`
+              + (warnings.length ? ` Warnings: ${warnings.join(' ')}` : ''),
+    type: warnings.length ? 'info' : 'success'
+  });
       
       // Clear results and reload local lists
       setExtResults([]);
@@ -844,7 +856,7 @@ export default function DoctorDashboard({ user, onLogout }) {
             <div className="card" style={{ background: 'linear-gradient(135deg, var(--white) 60%, var(--secondary) 100%)' }}>
               <h2>Hospital Interoperability Layer (HL7 FHIR Network)</h2>
               <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '8px', maxWidth: '800px' }}>
-                Connecting your health information system to external hospital hubs. You can search external directories (such as St. Jude General Hospital) for a patient record, retrieve their profile in FHIR JSON format, and pull/import it into your local MySQL system along with all linked conditions, prescriptions, and lab history.
+                Connecting your health information system to external hospital hubs. You can search external directories (such as Riverside General Hospital) for a patient record, retrieve their profile in FHIR JSON format, and pull/import it into your local MySQL system along with all linked conditions, prescriptions, and lab history.
               </p>
             </div>
 
@@ -881,8 +893,7 @@ export default function DoctorDashboard({ user, onLogout }) {
                       onChange={(e) => setExtSearchHospital(e.target.value)}
                     >
                       <option value="">All Connected Hubs</option>
-                      <option value="St. Jude General Hospital">St. Jude General Hospital</option>
-                      <option value="Gotham City Clinic">Gotham City Clinic</option>
+                      <option value="Riverside General Hospital">Riverside General Hospital</option>
                     </select>
                   </div>
 
