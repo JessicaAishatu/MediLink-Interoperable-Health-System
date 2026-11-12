@@ -10,7 +10,7 @@ A full-stack electronic health record system with role-based access for doctors 
 - **Clinician dashboard**: patient directory with search, visits and schedule, and a per-patient EHR view where doctors record conditions, lab results and prescriptions.
 - **Patient dashboard**: a patient sees their own appointments, conditions, medications and lab results, books appointments, and can view their record as FHIR JSON.
 - **FHIR R4 API**: Patient, Observation (lab results), Condition (medical history) and MedicationRequest (prescriptions) served as FHIR resources, with `?patient=` search on the three clinical resources.
-- **Cross-hospital import**: the FHIR Interop Console searches an external hospital source by surname, shows the FHIR Patient returned, and imports the patient with linked conditions, prescriptions and labs into MediLink.
+- **Cross-hospital import**: the FHIR Interop Console searches a separate FHIR server by name, shows the Patient returned, and imports the patient with linked conditions, lab results and prescriptions, recording the source and identifier on every record.
 
 | | |
 | --- | --- |
@@ -20,8 +20,9 @@ A full-stack electronic health record system with role-based access for doctors 
 | Imported record in the directory | Raw FHIR Patient resource |
 
 ## Architecture
+![Architecture](docs/architecture.png)
 
-React single-page app (Vite) → Express REST API with JWT and RBAC → MySQL 8. The FHIR module (`backend/routes/fhir.js`) maps MySQL rows to R4 resources on request. The interop module (`backend/routes/interop.js`) searches an external patient source and maps incoming FHIR resources into MediLink's tables. In the current version the external source is a mock inside the backend; replacing it with a separate FHIR server is the next step (see Roadmap).
+React single-page app (Vite) → Express REST API with JWT and RBAC → MySQL 8. The FHIR module (`backend/routes/fhir.js`) maps MySQL rows to R4 resources on request. The interop module (`backend/routes/interop.js`) searches an external patient source and maps incoming FHIR resources into MediLink's tables. The external source is a separate FHIR R4 server (external-hospital/, “Riverside General Hospital”) with its own identifier system; MediLink talks to it only over HTTP using standard FHIR search and read. The mapping from its resources into MediLink’s tables is documented in docs/fhir-mapping.md.
 
 ## FHIR support
 
@@ -59,6 +60,17 @@ npm install
 npm run dev                   # app on http://localhost:5173
 ```
 
+   In a third terminal, the demo external hospital:
+
+   ```bash
+   cd ../external-hospital
+   npm install
+   npm start                     # FHIR server on http://localhost:4001/fhir
+   ```
+
+   The backend reads `EXTERNAL_FHIR_BASE` and `EXTERNAL_HOSPITAL_NAME` from `.env` (defaults match the demo server).
+
+
 Demo accounts (password `password123`): `dr.doe@health.com` (doctor), `alice@health.com` (patient), `bob@health.com` (patient), `admin@health.com` (admin). `npm run db:setup` skips seeding if the database already exists; drop it to reseed.
 
 To call the FHIR API directly:
@@ -82,8 +94,7 @@ Found in a clean-clone audit (`docs/audit.md`) and being fixed:
 
 ## Roadmap
 
-1. Replace the in-process mock with a separate FHIR server so the import is a real two-system exchange.
-2. Tests (Jest/supertest), security hardening, and a documented data mapping.
+1. Tests (Jest/supertest), security hardening, and a documented data mapping.
 
 ## Provenance
 
