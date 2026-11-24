@@ -53,12 +53,16 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`=======================================================`);
-  console.log(` Health Interop Server running on port ${PORT}`);
-  console.log(` Mode: ${process.env.NODE_ENV || 'development'}`);
-  console.log(` FHIR API Base: http://localhost:${PORT}/api/fhir`);
-  console.log(` Health API Base: http://localhost:${PORT}/api/health`);
-  console.log(`=======================================================`);
-});
+// Start the server only when run directly (not when imported by tests)
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`=======================================================`);
+    console.log(` Health Interop Server running on port ${PORT}`);
+    console.log(` Mode: ${process.env.NODE_ENV || 'development'}`);
+    console.log(` FHIR API Base: http://localhost:${PORT}/api/fhir`);
+    console.log(` Health API Base: http://localhost:${PORT}/api/health`);
+    console.log(`=======================================================`);
+  });
+}
+
+module.exports = app;

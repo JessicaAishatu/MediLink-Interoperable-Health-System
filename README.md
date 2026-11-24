@@ -80,6 +80,15 @@ curl -X POST http://localhost:5000/api/auth/login -H "Content-Type: application/
 curl -H "Authorization: Bearer <token>" http://localhost:5000/api/fhir/Patient/pat-alice-johnson
 ```
 
+## Tests
+
+```bash
+cd backend
+npm test
+```
+
+Ten integration tests (Jest + supertest) covering the CapabilityStatement, Patient/Observation/Condition/MedicationRequest/Practitioner structure and terminology, date formatting, 401/403 role enforcement, and import error handling. Requires MySQL with the seeded database; the servers do not need to be running.
+
 ## Data
 
 All patients, clinicians and records are fictional demo data created by `backend/scripts/setup-db.js`. No real person or institution is represented.
