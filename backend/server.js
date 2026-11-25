@@ -8,16 +8,31 @@ const patientRoutes = require('./routes/patients');
 const clinicalRoutes = require('./routes/clinical');
 const fhirRoutes = require('./routes/fhir');
 const interopRoutes = require('./routes/interop');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Enable CORS for frontend requests
+// Security headers
+app.use(helmet());
+
+// Only the MediLink frontend may call this API from a browser
 app.use(cors({
-  origin: '*', // Allow all origins for development and ease of testing
+  origin: process.env.FRONTEND_ORIGIN || 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// At most 10 login attempts per IP every 15 minutes
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many login attempts. Try again in 15 minutes.' }
+});
 
 // Parsers
 app.use(express.json());
@@ -28,16 +43,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Root Endpoint - System Health Check
 app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date(),
-    service: 'Interoperable Health Information System API',
-    database: process.env.DB_NAME || 'health_system',
-    fhirVersion: 'R4 (v4.0.1)'
-  });
+  // … unchanged …
 });
 
 // Setup API Routes
+app.use('/api/auth/login', loginLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/clinical', clinicalRoutes);

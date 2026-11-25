@@ -51,7 +51,7 @@ export default function DoctorDashboard({ user, onLogout }) {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
-      setPatients(data);
+      setPatients(response.ok && Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error fetching patients:', err);
     }
@@ -64,7 +64,7 @@ export default function DoctorDashboard({ user, onLogout }) {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
-      setAppointmentsList(data);
+      setAppointmentsList(response.ok && Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error fetching appointments:', err);
     }
