@@ -111,4 +111,4 @@ MediLink is a personal project. The authentication, role-based access control an
 
 ## Licence
 
-MIT (see `LICENSE`).
+Copyright © 2026 Jessica Aishatu Abdullahi. All rights reserved. The code is published for viewing and evaluation only; see `LICENSE`. Contact me for any other use..
